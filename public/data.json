@@ -1,0 +1,16 @@
+{
+  "wallet": {
+    "address": "Do5yxjtdUqiAk6BUkbfFM6LYMNM2XDRk3T18koAEAuaF",
+    "balance": 0
+  },
+  "positions": [],
+  "recentTrades": [],
+  "stats": [],
+  "config": {
+    "tradeAmountSol": 0.005,
+    "maxPositions": 3,
+    "stopLossPercent": 30,
+    "takeProfitPercent": 50
+  },
+  "lastUpdate": null
+}

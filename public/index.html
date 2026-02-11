@@ -429,7 +429,15 @@
   <script>
     async function fetchData() {
       try {
-        const res = await fetch('/api/dashboard');
+        // Try local API first (when running locally)
+        let res = await fetch('/api/dashboard').catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json();
+          render(data);
+          return;
+        }
+        // Fall back to static JSON (for Vercel)
+        res = await fetch('/data.json');
         const data = await res.json();
         render(data);
       } catch (e) {

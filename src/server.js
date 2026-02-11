@@ -1,12 +1,52 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const config = require('./config');
 const db = require('./db');
 const wallet = require('./wallet');
 const risk = require('./risk');
 const monitor = require('./monitor');
 const trader = require('./trader');
+
+// Write data.json for static hosting (Vercel)
+async function writeDataJson() {
+  try {
+    const balance = await wallet.getBalance();
+    const positions = db.getOpenPositions.all();
+    const recentTrades = db.getRecentTrades.all(20);
+    const stats = db.getStats.all(7);
+    
+    const data = {
+      wallet: {
+        address: wallet.getPublicKey(),
+        balance,
+      },
+      positions,
+      recentTrades,
+      stats,
+      risk: risk.getStatus(),
+      monitor: monitor.getStatus(),
+      config: {
+        tradeAmountSol: config.tradeAmountSol,
+        maxPositions: config.maxPositions,
+        stopLossPercent: config.stopLossPercent,
+        takeProfitPercent: config.takeProfitPercent,
+      },
+      lastUpdate: new Date().toISOString(),
+    };
+    
+    fs.writeFileSync(
+      path.join(__dirname, '..', 'public', 'data.json'),
+      JSON.stringify(data, null, 2)
+    );
+  } catch (err) {
+    console.error('Failed to write data.json:', err.message);
+  }
+}
+
+// Update data.json every 10 seconds
+setInterval(writeDataJson, 10000);
 
 const app = express();
 app.use(cors());

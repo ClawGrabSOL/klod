@@ -1,0 +1,29 @@
+{
+  "name": "klod",
+  "version": "1.0.0",
+  "description": "Solana meme coin sniper with journal",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "solana",
+    "trading",
+    "meme-coins"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@jup-ag/api": "^6.0.48",
+    "@solana/web3.js": "^1.98.4",
+    "better-sqlite3": "^12.6.2",
+    "bs58": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "node-fetch": "^2.7.0",
+    "ws": "^8.19.0"
+  }
+}

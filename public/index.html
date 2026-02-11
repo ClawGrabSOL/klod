@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLOD</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg: #000;
+      --bg-secondary: #0a0a0a;
+      --bg-tertiary: #111;
+      --border: #222;
+      --text: #fff;
+      --text-dim: #666;
+      --text-muted: #444;
+      --accent: #fff;
+      --green: #00ff00;
+      --red: #ff0000;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    /* Header */
+    header {
+      margin-bottom: 60px;
+    }
+    
+    .logo {
+      font-size: 11px;
+      letter-spacing: 8px;
+      font-weight: 400;
+      margin-bottom: 8px;
+      color: var(--text-dim);
+    }
+    
+    .title {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+    }
+    
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    
+    .status-line {
+      display: flex;
+      gap: 40px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    
+    .status-dot.active {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+    
+    /* Stats Grid */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 60px;
+    }
+    
+    .stat-card {
+      background: var(--bg);
+      padding: 30px;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -1px;
+    }
+    
+    .stat-value.positive {
+      color: var(--green);
+    }
+    
+    .stat-value.negative {
+      color: var(--red);
+    }
+    
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    
+    /* Sections */
+    .section {
+      margin-bottom: 60px;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    
+    .section-action {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    /* Positions */
+    .positions-grid {
+      display: grid;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    
+    .position {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      background: var(--bg);
+      padding: 20px 25px;
+    }
+    
+    .position:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .position-token {
+      font-weight: 600;
+    }
+    
+    .position-token a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    
+    .position-token a:hover {
+      text-decoration: underline;
+    }
+    
+    .position-entry {
+      color: var(--text-dim);
+    }
+    
+    .position-current {
+      color: var(--text-dim);
+    }
+    
+    .position-pnl {
+      text-align: right;
+      font-weight: 600;
+    }
+    
+    .position-pnl.positive {
+      color: var(--green);
+    }
+    
+    .position-pnl.negative {
+      color: var(--red);
+    }
+    
+    /* Trade Log */
+    .trades {
+      border: 1px solid var(--border);
+    }
+    
+    .trade {
+      display: grid;
+      grid-template-columns: 140px 100px 80px 100px 1fr;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    
+    .trade:last-child {
+      border-bottom: none;
+    }
+    
+    .trade:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .trade-header {
+      color: var(--text-muted);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    
+    .trade-time {
+      color: var(--text-muted);
+    }
+    
+    .trade-token a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    
+    .trade-token a:hover {
+      text-decoration: underline;
+    }
+    
+    .trade-action {
+      font-weight: 600;
+    }
+    
+    .trade-action.buy {
+      color: var(--green);
+    }
+    
+    .trade-action.sell {
+      color: var(--red);
+    }
+    
+    .trade-amount {
+      color: var(--text-dim);
+    }
+    
+    .trade-reason {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 8px 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+    
+    .btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+    
+    /* Empty State */
+    .empty {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    /* Footer */
+    footer {
+      margin-top: 80px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    /* Responsive */
+    @media (max-width: 800px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .position {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      
+      .trade {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">SOLANA TRADING AGENT</div>
+      <h1 class="title">KLOD</h1>
+      <p class="subtitle">AUTOMATED MEME COIN SNIPER</p>
+      
+      <div class="status-line">
+        <div class="status-item">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">OFFLINE</span>
+        </div>
+        <div class="status-item">
+          <span id="walletShort">NO WALLET</span>
+        </div>
+        <div class="status-item">
+          <span id="lastUpdate">--:--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Balance</div>
+        <div class="stat-value" id="balance">0.00</div>
+        <div class="stat-sub">SOL</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today P&L</div>
+        <div class="stat-value" id="todayPnl">0.00</div>
+        <div class="stat-sub" id="todayStats">0W / 0L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Positions</div>
+        <div class="stat-value" id="openCount">0</div>
+        <div class="stat-sub" id="maxPos">/ 10</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Daily Risk</div>
+        <div class="stat-value" id="riskLeft">0.30</div>
+        <div class="stat-sub">SOL REMAINING</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Open Positions</span>
+      </div>
+      <div id="positionsList" class="positions-grid">
+        <div class="empty">NO OPEN POSITIONS</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Trade Log</span>
+        <div class="controls">
+          <button class="btn" id="btnStart" onclick="startMonitor()">START</button>
+          <button class="btn" id="btnStop" onclick="stopMonitor()">STOP</button>
+        </div>
+      </div>
+      <div id="tradesList" class="trades">
+        <div class="trade trade-header">
+          <span>TIME</span>
+          <span>TOKEN</span>
+          <span>SIDE</span>
+          <span>AMOUNT</span>
+          <span>REASON</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>KLOD v1.0.0</span>
+      <span>0.04 SOL / TRADE</span>
+    </footer>
+  </div>
+
+  <script>
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/dashboard');
+        const data = await res.json();
+        render(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    
+    function render(data) {
+      // Status
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (data.monitor?.isRunning) {
+        dot.classList.add('active');
+        txt.textContent = 'SCANNING';
+        document.getElementById('btnStart').classList.add('active');
+        document.getElementById('btnStop').classList.remove('active');
+      } else {
+        dot.classList.remove('active');
+        txt.textContent = 'OFFLINE';
+        document.getElementById('btnStart').classList.remove('active');
+        document.getElementById('btnStop').classList.remove('active');
+      }
+      
+      // Wallet
+      if (data.wallet?.address) {
+        document.getElementById('walletShort').textContent = 
+          data.wallet.address.slice(0, 4) + '...' + data.wallet.address.slice(-4);
+      }
+      
+      // Time
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+      
+      // Stats
+      document.getElementById('balance').textContent = (data.wallet?.balance || 0).toFixed(4);
+      
+      const pnl = data.stats?.[0]?.total_pnl_sol || 0;
+      const pnlEl = document.getElementById('todayPnl');
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(4);
+      pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+      
+      document.getElementById('todayStats').textContent = 
+        `${data.stats?.[0]?.wins || 0}W / ${data.stats?.[0]?.losses || 0}L`;
+      
+      const open = data.positions?.filter(p => p.status === 'open') || [];
+      document.getElementById('openCount').textContent = open.length;
+      document.getElementById('maxPos').textContent = `/ ${data.config?.maxPositions || 10}`;
+      
+      document.getElementById('riskLeft').textContent = (data.risk?.remainingRisk || 0).toFixed(2);
+      
+      // Positions
+      const posEl = document.getElementById('positionsList');
+      if (open.length === 0) {
+        posEl.innerHTML = '<div class="empty">NO OPEN POSITIONS</div>';
+      } else {
+        posEl.innerHTML = open.map(p => `
+          <div class="position">
+            <div class="position-token">
+              <a href="https://dexscreener.com/solana/${p.token_address}" target="_blank">
+                ${p.token_symbol || p.token_address.slice(0, 8)}
+              </a>
+            </div>
+            <div class="position-entry">${p.amount_sol_spent} SOL</div>
+            <div class="position-current">${p.entry_reason || '-'}</div>
+            <div class="position-pnl ${(p.pnl_percent || 0) >= 0 ? 'positive' : 'negative'}">
+              ${(p.pnl_percent || 0) >= 0 ? '+' : ''}${(p.pnl_percent || 0).toFixed(1)}%
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      // Trades
+      const trades = data.recentTrades || [];
+      const tradesEl = document.getElementById('tradesList');
+      const header = `<div class="trade trade-header">
+        <span>TIME</span>
+        <span>TOKEN</span>
+        <span>SIDE</span>
+        <span>AMOUNT</span>
+        <span>REASON</span>
+      </div>`;
+      
+      if (trades.length === 0) {
+        tradesEl.innerHTML = header + '<div class="empty">NO TRADES YET</div>';
+      } else {
+        tradesEl.innerHTML = header + trades.map(t => `
+          <div class="trade">
+            <span class="trade-time">${new Date(t.created_at).toLocaleString('en-US', { 
+              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false 
+            })}</span>
+            <span class="trade-token">
+              <a href="https://dexscreener.com/solana/${t.token_address}" target="_blank">
+                ${t.token_symbol || t.token_address.slice(0, 8)}
+              </a>
+            </span>
+            <span class="trade-action ${t.action.toLowerCase()}">${t.action}</span>
+            <span class="trade-amount">${t.amount_sol?.toFixed(4)} SOL</span>
+            <span class="trade-reason">${t.reason || '-'}</span>
+          </div>
+        `).join('');
+      }
+    }
+    
+    async function startMonitor() {
+      await fetch('/api/monitor/start', { method: 'POST' });
+      fetchData();
+    }
+    
+    async function stopMonitor() {
+      await fetch('/api/monitor/stop', { method: 'POST' });
+      fetchData();
+    }
+    
+    fetchData();
+    setInterval(fetchData, 5000);
+  </script>
+</body>
+</html>

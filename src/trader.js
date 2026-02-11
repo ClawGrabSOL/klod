@@ -1,78 +1,11 @@
-const { PublicKey, VersionedTransaction } = require('@solana/web3.js');
+const { VersionedTransaction } = require('@solana/web3.js');
 const fetch = require('node-fetch');
 const config = require('./config');
 const wallet = require('./wallet');
 const db = require('./db');
 const risk = require('./risk');
 
-const JUPITER_QUOTE_API = 'https://quote-api.jup.ag/v6/quote';
-const JUPITER_SWAP_API = 'https://quote-api.jup.ag/v6/swap';
-
-async function getQuote(inputMint, outputMint, amount) {
-  const params = new URLSearchParams({
-    inputMint,
-    outputMint,
-    amount: amount.toString(),
-    slippageBps: config.maxSlippageBps.toString(),
-  });
-
-  const response = await fetch(`${JUPITER_QUOTE_API}?${params}`);
-  if (!response.ok) {
-    throw new Error(`Jupiter quote failed: ${response.statusText}`);
-  }
-  return response.json();
-}
-
-async function executeSwap(quoteResponse) {
-  const connection = wallet.getConnection();
-  const keypair = wallet.getKeypair();
-  
-  if (!keypair) {
-    throw new Error('Wallet not initialized');
-  }
-
-  // Get swap transaction
-  const swapResponse = await fetch(JUPITER_SWAP_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      quoteResponse,
-      userPublicKey: keypair.publicKey.toBase58(),
-      wrapAndUnwrapSol: true,
-      dynamicComputeUnitLimit: true,
-      prioritizationFeeLamports: 'auto',
-    }),
-  });
-
-  if (!swapResponse.ok) {
-    throw new Error(`Jupiter swap failed: ${swapResponse.statusText}`);
-  }
-
-  const { swapTransaction } = await swapResponse.json();
-  
-  // Deserialize and sign
-  const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
-  const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-  transaction.sign([keypair]);
-
-  // Send transaction
-  const rawTransaction = transaction.serialize();
-  const txSignature = await connection.sendRawTransaction(rawTransaction, {
-    skipPreflight: true,
-    maxRetries: 3,
-  });
-
-  console.log(`📤 Transaction sent: ${txSignature}`);
-
-  // Wait for confirmation
-  const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
-  
-  if (confirmation.value.err) {
-    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-  }
-
-  return txSignature;
-}
+const PUMPPORTAL_API = 'https://pumpportal.fun/api/trade-local';
 
 async function buy(tokenAddress, tokenSymbol, tokenName, reason) {
   // Risk check
@@ -82,16 +15,51 @@ async function buy(tokenAddress, tokenSymbol, tokenName, reason) {
     return { success: false, reason: canTrade.reason };
   }
 
-  const amountLamports = Math.floor(config.tradeAmountSol * config.LAMPORTS_PER_SOL);
+  const keypair = wallet.getKeypair();
+  const connection = wallet.getConnection();
+  
+  if (!keypair) {
+    return { success: false, reason: 'Wallet not initialized' };
+  }
 
   try {
     console.log(`🛒 Buying ${tokenSymbol || tokenAddress.slice(0, 8)} for ${config.tradeAmountSol} SOL...`);
 
-    // Get quote: SOL -> Token
-    const quote = await getQuote(config.SOL_MINT, tokenAddress, amountLamports);
+    // Get transaction from PumpPortal
+    const response = await fetch(PUMPPORTAL_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        publicKey: keypair.publicKey.toBase58(),
+        action: 'buy',
+        mint: tokenAddress,
+        amount: config.tradeAmountSol.toString(),
+        denominatedInSol: 'true',
+        slippage: (config.maxSlippageBps / 100).toString(),
+        priorityFee: '0.0005',
+        pool: 'pump'
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`PumpPortal API failed: ${errorText}`);
+    }
+
+    // Get the transaction bytes
+    const txData = await response.arrayBuffer();
     
-    const outAmount = parseInt(quote.outAmount);
-    const pricePerToken = config.tradeAmountSol / (outAmount / Math.pow(10, quote.outputMint?.decimals || 9));
+    // Deserialize and sign
+    const tx = VersionedTransaction.deserialize(new Uint8Array(txData));
+    tx.sign([keypair]);
+
+    // Send transaction
+    const txSignature = await connection.sendRawTransaction(tx.serialize(), {
+      skipPreflight: true,
+      maxRetries: 3,
+    });
+
+    console.log(`📤 Transaction sent: ${txSignature}`);
 
     // Record pending trade
     db.insertTrade.run(
@@ -100,17 +68,22 @@ async function buy(tokenAddress, tokenSymbol, tokenName, reason) {
       tokenName,
       'BUY',
       config.tradeAmountSol,
-      outAmount,
-      pricePerToken,
-      null, // tx signature will be updated
+      0, // tokens amount unknown until confirmed
+      0,
+      txSignature,
       'pending',
       reason
     );
 
-    // Execute swap
-    const txSignature = await executeSwap(quote);
+    // Wait for confirmation
+    const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
     
-    // Update trade with signature
+    if (confirmation.value.err) {
+      db.updateTradeStatus.run('failed', txSignature);
+      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+    }
+
+    // Update trade status
     db.updateTradeStatus.run('confirmed', txSignature);
 
     // Create position
@@ -118,8 +91,8 @@ async function buy(tokenAddress, tokenSymbol, tokenName, reason) {
       tokenAddress,
       tokenSymbol,
       tokenName,
-      pricePerToken,
-      outAmount,
+      0, // entry price - will update
+      0, // amount tokens - will update
       config.tradeAmountSol,
       reason
     );
@@ -127,13 +100,11 @@ async function buy(tokenAddress, tokenSymbol, tokenName, reason) {
     // Update daily stats
     db.upsertDailyStats.run(1, 0, 0, 0, config.tradeAmountSol);
 
-    console.log(`✅ Buy successful! TX: ${txSignature}`);
+    console.log(`✅ Buy confirmed! TX: https://solscan.io/tx/${txSignature}`);
     
     return {
       success: true,
       txSignature,
-      amountTokens: outAmount,
-      pricePerToken,
     };
   } catch (err) {
     console.error(`❌ Buy failed: ${err.message}`);
@@ -160,27 +131,69 @@ async function sell(tokenAddress, reason) {
     return { success: false, reason: 'No position found' };
   }
 
+  const keypair = wallet.getKeypair();
+  const connection = wallet.getConnection();
+
+  if (!keypair) {
+    return { success: false, reason: 'Wallet not initialized' };
+  }
+
   try {
     console.log(`💰 Selling ${position.token_symbol || tokenAddress.slice(0, 8)}...`);
 
     // Get token balance
     const tokenBalance = await wallet.getTokenBalance(tokenAddress);
     if (tokenBalance <= 0) {
-      db.closePosition.run(reason, -100, tokenAddress); // Mark as total loss
+      db.closePosition.run(reason, -100, tokenAddress);
       return { success: false, reason: 'No tokens to sell' };
     }
 
-    const tokenBalanceLamports = Math.floor(tokenBalance * Math.pow(10, 9)); // Assuming 9 decimals
+    // Get transaction from PumpPortal - sell all tokens
+    const response = await fetch(PUMPPORTAL_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        publicKey: keypair.publicKey.toBase58(),
+        action: 'sell',
+        mint: tokenAddress,
+        amount: Math.floor(tokenBalance).toString(),
+        denominatedInSol: 'false',
+        slippage: (config.maxSlippageBps / 100).toString(),
+        priorityFee: '0.0005',
+        pool: 'pump'
+      })
+    });
 
-    // Get quote: Token -> SOL
-    const quote = await getQuote(tokenAddress, config.SOL_MINT, tokenBalanceLamports);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`PumpPortal API failed: ${errorText}`);
+    }
+
+    const txData = await response.arrayBuffer();
+    const tx = VersionedTransaction.deserialize(new Uint8Array(txData));
+    tx.sign([keypair]);
+
+    const txSignature = await connection.sendRawTransaction(tx.serialize(), {
+      skipPreflight: true,
+      maxRetries: 3,
+    });
+
+    console.log(`📤 Sell transaction sent: ${txSignature}`);
+
+    // Get balance before to calculate PnL
+    const balanceBefore = await wallet.getBalance();
+
+    const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
     
-    const outAmountSol = parseInt(quote.outAmount) / config.LAMPORTS_PER_SOL;
-    const pnl = outAmountSol - position.amount_sol_spent;
-    const pnlPercent = (pnl / position.amount_sol_spent) * 100;
+    if (confirmation.value.err) {
+      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+    }
 
-    // Execute swap
-    const txSignature = await executeSwap(quote);
+    // Get balance after to calculate PnL
+    const balanceAfter = await wallet.getBalance();
+    const solReceived = balanceAfter - balanceBefore + 0.0005; // Add back priority fee
+    const pnl = solReceived - position.amount_sol_spent;
+    const pnlPercent = (pnl / position.amount_sol_spent) * 100;
 
     // Record trade
     db.insertTrade.run(
@@ -188,9 +201,9 @@ async function sell(tokenAddress, reason) {
       position.token_symbol,
       position.token_name,
       'SELL',
-      outAmountSol,
+      solReceived,
       tokenBalance,
-      outAmountSol / tokenBalance,
+      solReceived / tokenBalance,
       txSignature,
       'confirmed',
       reason
@@ -201,21 +214,20 @@ async function sell(tokenAddress, reason) {
 
     // Update stats
     const isWin = pnl > 0;
-    db.upsertDailyStats.run(1, isWin ? 1 : 0, isWin ? 0 : 1, pnl, outAmountSol);
+    db.upsertDailyStats.run(1, isWin ? 1 : 0, isWin ? 0 : 1, pnl, solReceived);
 
-    // Record win/loss for risk management
     if (pnl < 0) {
       risk.recordLoss(Math.abs(pnl));
     } else {
       risk.recordWin(pnl);
     }
 
-    console.log(`✅ Sell successful! PnL: ${pnl > 0 ? '+' : ''}${pnl.toFixed(4)} SOL (${pnlPercent.toFixed(1)}%)`);
+    console.log(`✅ Sell confirmed! PnL: ${pnl > 0 ? '+' : ''}${pnl.toFixed(4)} SOL (${pnlPercent.toFixed(1)}%)`);
+    console.log(`   TX: https://solscan.io/tx/${txSignature}`);
 
     return {
       success: true,
       txSignature,
-      amountSol: outAmountSol,
       pnl,
       pnlPercent,
     };
@@ -230,31 +242,24 @@ async function checkPositions() {
   
   for (const position of positions) {
     try {
-      // Get current price via quote
-      const quote = await getQuote(
-        config.SOL_MINT,
-        position.token_address,
-        config.LAMPORTS_PER_SOL * 0.001 // Check with small amount
-      );
+      // Get current token balance value
+      const tokenBalance = await wallet.getTokenBalance(position.token_address);
       
-      const currentPrice = 0.001 / (parseInt(quote.outAmount) / Math.pow(10, 9));
-      const pnlPercent = ((currentPrice - position.entry_price) / position.entry_price) * 100;
-      
-      // Update position
-      db.updatePositionPrice.run(currentPrice, pnlPercent, position.token_address);
-
-      // Check stop loss
-      if (risk.shouldStopLoss(position.entry_price, currentPrice)) {
-        console.log(`🛑 Stop loss triggered for ${position.token_symbol}`);
-        await sell(position.token_address, 'Stop loss triggered');
+      if (tokenBalance <= 0) {
+        // Token gone - mark as loss
+        db.closePosition.run('Tokens no longer in wallet', -100, position.token_address);
+        risk.recordLoss(position.amount_sol_spent);
         continue;
       }
 
-      // Check take profit
-      if (risk.shouldTakeProfit(position.entry_price, currentPrice)) {
-        console.log(`🎯 Take profit triggered for ${position.token_symbol}`);
-        await sell(position.token_address, 'Take profit triggered');
-        continue;
+      // For pump.fun tokens, we need to estimate current value
+      // This is tricky without a quote API - for now we'll check based on time
+      const positionAge = (Date.now() - new Date(position.created_at).getTime()) / 1000 / 60; // minutes
+      
+      // Auto-sell after 30 minutes to avoid holding too long
+      if (positionAge > 30) {
+        console.log(`⏰ Position timeout for ${position.token_symbol}`);
+        await sell(position.token_address, 'Position timeout (30 min)');
       }
 
     } catch (err) {
@@ -267,5 +272,4 @@ module.exports = {
   buy,
   sell,
   checkPositions,
-  getQuote,
 };

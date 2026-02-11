@@ -242,24 +242,26 @@ async function checkPositions() {
   
   for (const position of positions) {
     try {
-      // Get current token balance value
+      // Get current token balance
       const tokenBalance = await wallet.getTokenBalance(position.token_address);
       
       if (tokenBalance <= 0) {
         // Token gone - mark as loss
+        console.log(`💀 No tokens left for ${position.token_symbol} - closing position`);
         db.closePosition.run('Tokens no longer in wallet', -100, position.token_address);
         risk.recordLoss(position.amount_sol_spent);
         continue;
       }
 
-      // For pump.fun tokens, we need to estimate current value
-      // This is tricky without a quote API - for now we'll check based on time
       const positionAge = (Date.now() - new Date(position.created_at).getTime()) / 1000 / 60; // minutes
       
-      // Auto-sell after 30 minutes to avoid holding too long
-      if (positionAge > 30) {
-        console.log(`⏰ Position timeout for ${position.token_symbol}`);
-        await sell(position.token_address, 'Position timeout (30 min)');
+      // Quick scalp strategy:
+      // - Sell after 2 minutes to capture initial pump or cut losses fast
+      if (positionAge > 2) {
+        console.log(`⏰ Quick sell for ${position.token_symbol} (${positionAge.toFixed(1)} min old)`);
+        await sell(position.token_address, `Quick scalp (${positionAge.toFixed(1)} min)`);
+        // Small delay between sells to avoid rate limits
+        await new Promise(r => setTimeout(r, 1000));
       }
 
     } catch (err) {
@@ -268,8 +270,22 @@ async function checkPositions() {
   }
 }
 
+// Start checking positions immediately and frequently
+async function startPositionChecker() {
+  console.log('🔄 Starting position checker (every 30s)...');
+  
+  // Check immediately
+  await checkPositions();
+  
+  // Then every 30 seconds
+  setInterval(async () => {
+    await checkPositions();
+  }, 30000);
+}
+
 module.exports = {
   buy,
   sell,
   checkPositions,
+  startPositionChecker,
 };

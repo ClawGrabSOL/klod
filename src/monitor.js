@@ -18,6 +18,8 @@ class Monitor {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.processedTokens = new Set();
+    this.lastBuyTime = 0;
+    this.minBuyIntervalMs = 30000; // Wait 30s between buys
   }
 
   async start() {
@@ -27,19 +29,14 @@ class Monitor {
     console.log('🔍 Starting token monitor...');
     this.connectPumpFun();
     
-    // Also start position checker interval
-    this.positionChecker = setInterval(async () => {
-      await trader.checkPositions();
-    }, 30000); // Check every 30 seconds
+    // Start the position checker
+    trader.startPositionChecker();
   }
 
   stop() {
     this.isRunning = false;
     if (this.ws) {
       this.ws.close();
-    }
-    if (this.positionChecker) {
-      clearInterval(this.positionChecker);
     }
     console.log('🛑 Monitor stopped');
   }
@@ -122,8 +119,16 @@ class Monitor {
       return;
     }
 
+    // Rate limit - don't buy too fast
+    const timeSinceLastBuy = Date.now() - this.lastBuyTime;
+    if (timeSinceLastBuy < this.minBuyIntervalMs) {
+      console.log(`⏳ Rate limited - waiting ${((this.minBuyIntervalMs - timeSinceLastBuy) / 1000).toFixed(0)}s`);
+      return;
+    }
+
     // Try to buy
     console.log(`\n🚀 Attempting to buy ${message.symbol || tokenAddress.slice(0, 8)}...`);
+    this.lastBuyTime = Date.now();
     
     const result = await trader.buy(
       tokenAddress,

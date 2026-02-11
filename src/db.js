@@ -65,8 +65,11 @@ const updateTradeStatus = db.prepare(`
 
 // Position functions
 const insertPosition = db.prepare(`
-  INSERT OR REPLACE INTO positions (token_address, token_symbol, token_name, entry_price, amount_tokens, amount_sol_spent, status, entry_reason)
+  INSERT INTO positions (token_address, token_symbol, token_name, entry_price, amount_tokens, amount_sol_spent, status, entry_reason)
   VALUES (?, ?, ?, ?, ?, ?, 'open', ?)
+  ON CONFLICT(token_address) DO UPDATE SET
+    amount_sol_spent = amount_sol_spent + excluded.amount_sol_spent,
+    entry_reason = excluded.entry_reason
 `);
 
 const getOpenPositions = db.prepare(`

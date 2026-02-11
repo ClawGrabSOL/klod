@@ -1,16 +1,123 @@
 {
   "wallet": {
     "address": "Do5yxjtdUqiAk6BUkbfFM6LYMNM2XDRk3T18koAEAuaF",
-    "balance": 0
+    "balance": 0.533109136
   },
-  "positions": [],
-  "recentTrades": [],
-  "stats": [],
+  "positions": [
+    {
+      "id": 2,
+      "token_address": "9ffMqzgf3hTaaC83L4V7gfUbdoXfddKNEatLCRXspump",
+      "token_symbol": "SOL",
+      "token_name": "Sol the Trophy Tomato",
+      "entry_price": 0,
+      "amount_tokens": 0,
+      "amount_sol_spent": 0.005,
+      "current_price": null,
+      "pnl_percent": 0,
+      "status": "open",
+      "entry_reason": "New token launch - Score: 3/4",
+      "exit_reason": null,
+      "created_at": "2026-02-11 17:21:53",
+      "closed_at": null
+    }
+  ],
+  "recentTrades": [
+    {
+      "id": 5,
+      "token_address": "9ffMqzgf3hTaaC83L4V7gfUbdoXfddKNEatLCRXspump",
+      "token_symbol": "SOL",
+      "token_name": "Sol the Trophy Tomato",
+      "action": "BUY",
+      "amount_sol": 0.005,
+      "amount_tokens": 0,
+      "price_per_token": 0,
+      "tx_signature": "nKnaGNFgynp8RuBwGXQps4CQu7SoSZJPHKP4ZuTQHqbyJd6RcxrVbj8KyU2eyovUJi9rJ1oEt8FAp72wazLTjY1",
+      "status": "confirmed",
+      "reason": "New token launch - Score: 3/4",
+      "created_at": "2026-02-11 17:21:53"
+    },
+    {
+      "id": 4,
+      "token_address": "28RhKdjei1KQLgpupr6f4aL9va4ajwHLpqVsmpRspump",
+      "token_symbol": "deliciousF",
+      "token_name": "delicious food",
+      "action": "BUY",
+      "amount_sol": 0.005,
+      "amount_tokens": 0,
+      "price_per_token": 0,
+      "tx_signature": null,
+      "status": "failed",
+      "reason": "Failed: Transaction failed: {\"InstructionError\":[3,{\"Custom\":6002}]}",
+      "created_at": "2026-02-11 17:16:45"
+    },
+    {
+      "id": 3,
+      "token_address": "28RhKdjei1KQLgpupr6f4aL9va4ajwHLpqVsmpRspump",
+      "token_symbol": "deliciousF",
+      "token_name": "delicious food",
+      "action": "BUY",
+      "amount_sol": 0.005,
+      "amount_tokens": 0,
+      "price_per_token": 0,
+      "tx_signature": "57HUomVS8C6wNjZPBw3DWno5kkAdHQfDVKXgeFVMqSvHKvvSXgqiWzAzfwBQu5FQj8CxLgpJ2KVg5npQnhWLHFyK",
+      "status": "failed",
+      "reason": "New token launch - Score: 3/4",
+      "created_at": "2026-02-11 17:16:44"
+    },
+    {
+      "id": 2,
+      "token_address": "2pREWhNQ3cBDuK6ee9mQrfsBmTAsqFUmGTQbRqMTpump",
+      "token_symbol": "AURA",
+      "token_name": "Mog Aura",
+      "action": "SELL",
+      "amount_sol": 0.005401163999999958,
+      "amount_tokens": 163911.145926,
+      "price_per_token": 3.29517798773635e-8,
+      "tx_signature": "4mEX43EzwqZfDKy6TTBtK43RSZHzvfG1oQ9bKma9umYqhPmCVQuWPgDaHwd1VT9bWwCeV6feywe4UAaguTGBGEZW",
+      "status": "confirmed",
+      "reason": "Manual sell - closing all",
+      "created_at": "2026-02-11 17:16:01"
+    },
+    {
+      "id": 1,
+      "token_address": "2pREWhNQ3cBDuK6ee9mQrfsBmTAsqFUmGTQbRqMTpump",
+      "token_symbol": "AURA",
+      "token_name": "Mog Aura",
+      "action": "BUY",
+      "amount_sol": 0.005,
+      "amount_tokens": 0,
+      "price_per_token": 0,
+      "tx_signature": "3vMf4U5SKhDxVcgmxVJJUmVp89v38TKPuZdC1QD4a3H9EVcAGTtKghqPpX273QC5HuiHbppDf1DxzqkDYpTqfGB",
+      "status": "confirmed",
+      "reason": "New token launch - Score: 3/4",
+      "created_at": "2026-02-11 17:15:08"
+    }
+  ],
+  "stats": [
+    {
+      "date": "2026-02-11",
+      "trades_count": 3,
+      "wins": 1,
+      "losses": 0,
+      "total_pnl_sol": 0.00040116399999995823,
+      "volume_sol": 0.01540116399999996
+    }
+  ],
+  "risk": {
+    "dailyLoss": 0,
+    "maxDailyLoss": 0.05,
+    "remainingRisk": 0.05
+  },
+  "monitor": {
+    "isRunning": true,
+    "wsConnected": true,
+    "processedTokens": 5
+  },
   "config": {
     "tradeAmountSol": 0.005,
     "maxPositions": 3,
     "stopLossPercent": 30,
     "takeProfitPercent": 50
   },
-  "lastUpdate": null
+  "lastUpdate": "2026-02-11T17:22:02.157Z"
 }

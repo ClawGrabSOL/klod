@@ -256,12 +256,15 @@ async function checkPositions() {
       const positionAge = (Date.now() - new Date(position.created_at).getTime()) / 1000 / 60; // minutes
       
       // Quick scalp strategy:
-      // - Sell after 2 minutes to capture initial pump or cut losses fast
-      if (positionAge > 2) {
-        console.log(`⏰ Quick sell for ${position.token_symbol} (${positionAge.toFixed(1)} min old)`);
-        await sell(position.token_address, `Quick scalp (${positionAge.toFixed(1)} min)`);
-        // Small delay between sells to avoid rate limits
-        await new Promise(r => setTimeout(r, 1000));
+      // - Sell after 1 minute to capture initial pump or cut losses fast
+      if (positionAge > 1) {
+        console.log(`⏰ Selling ${position.token_symbol} (held ${positionAge.toFixed(1)} min)`);
+        const result = await sell(position.token_address, `Auto-sell after ${positionAge.toFixed(1)} min`);
+        if (result.success) {
+          console.log(`💵 Sold! PnL: ${result.pnl?.toFixed(4) || '?'} SOL (${result.pnlPercent?.toFixed(1) || '?'}%)`);
+        }
+        // Delay between sells to avoid rate limits
+        await new Promise(r => setTimeout(r, 2000));
       }
 
     } catch (err) {
@@ -272,15 +275,26 @@ async function checkPositions() {
 
 // Start checking positions immediately and frequently
 async function startPositionChecker() {
-  console.log('🔄 Starting position checker (every 30s)...');
+  console.log('🔄 Position checker active (every 30s)');
+  
+  // Run position check loop
+  const runCheck = async () => {
+    try {
+      const positions = db.getOpenPositions.all();
+      if (positions.length > 0) {
+        console.log(`\n🔍 Checking ${positions.length} open position(s)...`);
+        await checkPositions();
+      }
+    } catch (err) {
+      console.error('Position check error:', err.message);
+    }
+  };
   
   // Check immediately
-  await checkPositions();
+  await runCheck();
   
   // Then every 30 seconds
-  setInterval(async () => {
-    await checkPositions();
-  }, 30000);
+  setInterval(runCheck, 30000);
 }
 
 module.exports = {

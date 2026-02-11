@@ -19,7 +19,7 @@ class Monitor {
     this.maxReconnectAttempts = 5;
     this.processedTokens = new Set();
     this.lastBuyTime = 0;
-    this.minBuyIntervalMs = 30000; // Wait 30s between buys
+    this.minBuyIntervalMs = 120000; // Wait 2 MINUTES between buys
   }
 
   async start() {
